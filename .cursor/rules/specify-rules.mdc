@@ -1,0 +1,29 @@
+# ir-rev Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2026-01-23
+
+## Active Technologies
+
+- TypeScript 5.x, Node.js 20+ + Next.js (latest with App Router), React 19+, shadcn/ui, Radix UI Themes, Tailwind CSS, Framer Motion, Neon Auth, Drizzle ORM, Vercel Blob SDK (001-revolution-memorial)
+
+## Project Structure
+
+```text
+src/
+tests/
+```
+
+## Commands
+
+npm test && npm run lint
+
+## Code Style
+
+TypeScript 5.x, Node.js 20+: Follow standard conventions
+
+## Recent Changes
+
+- 001-revolution-memorial: Added TypeScript 5.x, Node.js 20+ + Next.js (latest with App Router), React 19+, shadcn/ui, Radix UI Themes, Tailwind CSS, Framer Motion, Neon Auth, Drizzle ORM, Vercel Blob SDK
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->
