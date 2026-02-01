@@ -19,7 +19,10 @@ const pageTransition = {
   transition: { duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] },
 };
 
-export function PublicLayoutClient({ children, initialLanguage }: PublicLayoutClientProps) {
+export function PublicLayoutClient({
+  children,
+  initialLanguage,
+}: PublicLayoutClientProps) {
   const pathname = usePathname();
 
   return (
@@ -33,7 +36,10 @@ export function PublicLayoutClient({ children, initialLanguage }: PublicLayoutCl
               initial={pageTransition.initial}
               animate={pageTransition.animate}
               exit={pageTransition.exit}
-              transition={pageTransition.transition}
+              transition={{
+                duration: 0.25,
+                ease: [0.25, 0.46, 0.45, 0.94],
+              }}
               className="flex flex-col flex-1 min-h-full"
             >
               {children}
