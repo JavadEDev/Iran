@@ -8,7 +8,11 @@ export default async function StatementDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const { slug } = await params;
+  const resolved = await params;
+  const slug = (resolved.slug ?? "").replace(/\/+$/, "").trim() || null;
+  if (!slug) {
+    notFound();
+  }
   const lang = await getServerLanguage();
   const statement = await getStatementBySlug(slug, lang);
 

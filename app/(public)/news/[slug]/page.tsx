@@ -8,7 +8,16 @@ export default async function NewsDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const { slug } = await params;
+  const resolved = await params;
+  let slug = (resolved.slug ?? "").replace(/\/+$/, "").trim();
+  try {
+    slug = decodeURIComponent(slug);
+  } catch {
+    /* use as-is if not valid percent-encoding */
+  }
+  if (!slug) {
+    notFound();
+  }
   const lang = await getServerLanguage();
   const news = await getNewsBySlug(slug, lang);
 

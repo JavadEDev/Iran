@@ -79,6 +79,9 @@ export function MediaFilters({
     onSortChange(defaultSort);
   };
 
+  const inputBase =
+    "w-full min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700";
+
   return (
     <div
       className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6"
@@ -86,35 +89,36 @@ export function MediaFilters({
       role="search"
       aria-label={t.country + ", " + t.city + ", " + t.type}
     >
-      <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-        <div>
+      {/* Grid: 1 col mobile, 2 cols md, 7 cols xl so Date Range & Sort By get 2 cols each */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_minmax(200px,1.2fr)_minmax(200px,1.2fr)] gap-4 mb-4">
+        <div className="min-w-0">
           <label className="block text-sm font-medium mb-2">{t.country}</label>
           <input
             type="text"
             value={filters.country || ""}
             onChange={(e) => handleFilterChange("country", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
+            className={inputBase}
             placeholder={t.country}
           />
         </div>
 
-        <div>
+        <div className="min-w-0">
           <label className="block text-sm font-medium mb-2">{t.city}</label>
           <input
             type="text"
             value={filters.city || ""}
             onChange={(e) => handleFilterChange("city", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
+            className={inputBase}
             placeholder={t.city}
           />
         </div>
 
-        <div>
+        <div className="min-w-0">
           <label className="block text-sm font-medium mb-2">{t.type}</label>
           <select
             value={filters.mediaType || ""}
             onChange={(e) => handleFilterChange("mediaType", e.target.value || undefined)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
+            className={inputBase}
           >
             <option value="">{t.all}</option>
             <option value="photo">{t.photo}</option>
@@ -122,31 +126,38 @@ export function MediaFilters({
           </select>
         </div>
 
-        <div>
+        <div className="md:col-span-2 min-w-0">
           <label className="block text-sm font-medium mb-2">{t.dateRange}</label>
-          <div className="flex gap-2">
+          <div className="flex gap-2 min-w-0">
             <input
               type="date"
-              value={filters.dateFrom ? filters.dateFrom.toISOString().split('T')[0] : ""}
-              onChange={(e) => handleFilterChange("dateFrom", e.target.value ? new Date(e.target.value) : undefined)}
-              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
+              value={filters.dateFrom ? filters.dateFrom.toISOString().split("T")[0] : ""}
+              onChange={(e) =>
+                handleFilterChange("dateFrom", e.target.value ? new Date(e.target.value) : undefined)
+              }
+              className={`flex-1 min-w-0 ${inputBase}`}
+              aria-label={t.dateRange + " " + (language === "fa" ? "از" : "from")}
             />
             <input
               type="date"
-              value={filters.dateTo ? filters.dateTo.toISOString().split('T')[0] : ""}
-              onChange={(e) => handleFilterChange("dateTo", e.target.value ? new Date(e.target.value) : undefined)}
-              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
+              value={filters.dateTo ? filters.dateTo.toISOString().split("T")[0] : ""}
+              onChange={(e) =>
+                handleFilterChange("dateTo", e.target.value ? new Date(e.target.value) : undefined)
+              }
+              className={`flex-1 min-w-0 ${inputBase}`}
+              aria-label={t.dateRange + " " + (language === "fa" ? "تا" : "to")}
             />
           </div>
         </div>
 
-        <div>
+        <div className="md:col-span-2 min-w-0">
           <label className="block text-sm font-medium mb-2">{t.sortBy}</label>
-          <div className="flex gap-2">
+          <div className="flex gap-2 min-w-0">
             <select
               value={sort.field}
-              onChange={(e) => setSort({ ...sort, field: e.target.value as any })}
-              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
+              onChange={(e) => setSort({ ...sort, field: e.target.value as "eventDate" | "createdAt" | "location" })}
+              className={`flex-1 min-w-0 ${inputBase}`}
+              aria-label={t.sortBy + " " + (language === "fa" ? "فیلد" : "field")}
             >
               <option value="eventDate">{t.eventDate}</option>
               <option value="createdAt">{t.createdAt}</option>
@@ -154,8 +165,11 @@ export function MediaFilters({
             </select>
             <select
               value={sort.direction}
-              onChange={(e) => setSort({ ...sort, direction: e.target.value as any })}
-              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
+              onChange={(e) =>
+                setSort({ ...sort, direction: e.target.value as "asc" | "desc" })
+              }
+              className={`flex-1 min-w-0 ${inputBase}`}
+              aria-label={t.sortBy + " " + (language === "fa" ? "ترتیب" : "order")}
             >
               <option value="asc">{t.ascending}</option>
               <option value="desc">{t.descending}</option>
@@ -164,7 +178,7 @@ export function MediaFilters({
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           onClick={handleApply}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"

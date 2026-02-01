@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 import { updateMedia, deleteMedia } from "@/lib/actions/media";
 import type { MediaItem, MediaType } from "@/lib/types";
 
@@ -11,13 +12,15 @@ interface MediaEditFormProps {
 
 export function MediaEditForm({ media }: MediaEditFormProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
   const [formData, setFormData] = useState({
     mediaType: media.mediaType,
     country: media.country,
     city: media.city,
     district: media.district || "",
-    eventDate: media.eventDate ? media.eventDate.toISOString().split('T')[0] : "",
+    eventDate: media.eventDate
+      ? media.eventDate.toISOString().split("T")[0]
+      : "",
     descriptionFa: media.descriptionFa || "",
     descriptionEn: media.descriptionEn || "",
   });
@@ -27,26 +30,39 @@ export function MediaEditForm({ media }: MediaEditFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsPending(true);
 
-    startTransition(async () => {
+    try {
       const result = await updateMedia(media.id, {
         mediaType: formData.mediaType,
         country: formData.country,
         city: formData.city,
         district: formData.district || undefined,
-        eventDate: formData.eventDate ? new Date(formData.eventDate) : undefined,
+        eventDate: formData.eventDate
+          ? new Date(formData.eventDate)
+          : undefined,
         descriptionFa: formData.descriptionFa || undefined,
         descriptionEn: formData.descriptionEn || undefined,
         file: file || undefined,
       });
 
       if (result.success) {
+        toast.success("Media item updated successfully!");
+        await new Promise((resolve) => setTimeout(resolve, 100));
         router.push("/admin/media");
-        router.refresh();
       } else {
-        setError(result.error);
+        const errorMsg = result.error || "Failed to update media";
+        setError(errorMsg);
+        toast.error(errorMsg);
+        setIsPending(false);
       }
-    });
+    } catch (err) {
+      const errorMsg =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(errorMsg);
+      toast.error(errorMsg);
+      setIsPending(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -54,26 +70,43 @@ export function MediaEditForm({ media }: MediaEditFormProps) {
       return;
     }
 
-    startTransition(async () => {
+    setIsPending(true);
+    try {
       const result = await deleteMedia(media.id);
       if (result.success) {
+        toast.success("Media item deleted successfully!");
+        await new Promise((resolve) => setTimeout(resolve, 100));
         router.push("/admin/media");
-        router.refresh();
       } else {
-        setError(result.error);
+        const errorMsg = result.error || "Failed to delete media";
+        setError(errorMsg);
+        toast.error(errorMsg);
+        setIsPending(false);
       }
-    });
+    } catch (err) {
+      const errorMsg =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(errorMsg);
+      toast.error(errorMsg);
+      setIsPending(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">{error}</div>}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium mb-2">Media Type</label>
         <select
           value={formData.mediaType}
-          onChange={(e) => setFormData({ ...formData, mediaType: e.target.value as MediaType })}
+          onChange={(e) =>
+            setFormData({ ...formData, mediaType: e.target.value as MediaType })
+          }
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
           required
         >
@@ -88,7 +121,9 @@ export function MediaEditForm({ media }: MediaEditFormProps) {
           <input
             type="text"
             value={formData.country}
-            onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, country: e.target.value })
+            }
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
             required
           />
@@ -107,11 +142,15 @@ export function MediaEditForm({ media }: MediaEditFormProps) {
 
       <div className="grid md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-2">District/Neighborhood</label>
+          <label className="block text-sm font-medium mb-2">
+            District/Neighborhood
+          </label>
           <input
             type="text"
             value={formData.district}
-            onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, district: e.target.value })
+            }
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
           />
         </div>
@@ -120,27 +159,37 @@ export function MediaEditForm({ media }: MediaEditFormProps) {
           <input
             type="date"
             value={formData.eventDate}
-            onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, eventDate: e.target.value })
+            }
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Description (Persian)</label>
+        <label className="block text-sm font-medium mb-2">
+          Description (Persian)
+        </label>
         <textarea
           value={formData.descriptionFa}
-          onChange={(e) => setFormData({ ...formData, descriptionFa: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, descriptionFa: e.target.value })
+          }
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
           rows={3}
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Description (English)</label>
+        <label className="block text-sm font-medium mb-2">
+          Description (English)
+        </label>
         <textarea
           value={formData.descriptionEn}
-          onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, descriptionEn: e.target.value })
+          }
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
           rows={3}
         />
@@ -157,9 +206,17 @@ export function MediaEditForm({ media }: MediaEditFormProps) {
         {media.fileUrl && (
           <div className="mt-2">
             {media.mediaType === "photo" ? (
-              <img src={media.fileUrl} alt="Current media" className="h-32 w-auto rounded" />
+              <img
+                src={media.fileUrl}
+                alt="Current media"
+                className="h-32 w-auto rounded"
+              />
             ) : (
-              <video src={media.fileUrl} controls className="h-32 w-auto rounded" />
+              <video
+                src={media.fileUrl}
+                controls
+                className="h-32 w-auto rounded"
+              />
             )}
           </div>
         )}
@@ -172,6 +229,14 @@ export function MediaEditForm({ media }: MediaEditFormProps) {
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
         >
           {isPending ? "Saving..." : "Save Changes"}
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push("/admin/media")}
+          disabled={isPending}
+          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+        >
+          Cancel
         </button>
         <button
           type="button"

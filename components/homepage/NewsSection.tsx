@@ -39,7 +39,7 @@ export function NewsSection({ featuredNews, recentNews }: NewsSectionProps) {
             viewport={{ once: true }}
             className="mb-12"
           >
-            <Link href={`/news/${featuredNews.slug}`} className="block group">
+            <Link href={`/news/${encodeURIComponent(featuredNews.slug)}`} className="block group">
               <div className="relative aspect-video mb-4 rounded-lg overflow-hidden">
                 {featuredNews.thumbnailUrl ? (
                   <Image
@@ -74,7 +74,7 @@ export function NewsSection({ featuredNews, recentNews }: NewsSectionProps) {
               viewport={{ once: true }}
               transition={{ duration: 0.4 }}
             >
-              <Link href={`/news/${item.slug}`} className="block group">
+              <Link href={`/news/${encodeURIComponent(item.slug)}`} className="block group">
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
                   {item.thumbnailUrl && (
                     <div className="relative aspect-video">

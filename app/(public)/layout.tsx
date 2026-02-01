@@ -1,21 +1,12 @@
-"use client";
+import { getServerLanguage } from "@/lib/i18n/server";
+import { PublicLayoutClient } from "@/components/layout/PublicLayoutClient";
 
-import { I18nProvider } from "@/lib/i18n/context";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
-
-export default function PublicLayout({
+export default async function PublicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <I18nProvider>
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
-      </div>
-    </I18nProvider>
-  );
+  const initialLanguage = await getServerLanguage();
+
+  return <PublicLayoutClient initialLanguage={initialLanguage}>{children}</PublicLayoutClient>;
 }

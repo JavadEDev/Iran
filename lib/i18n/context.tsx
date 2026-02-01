@@ -13,33 +13,39 @@ interface I18nContextType {
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
 
-export function I18nProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(defaultLanguage);
+export function I18nProvider({ 
+  children, 
+  initialLanguage 
+}: { 
+  children: ReactNode;
+  initialLanguage?: Language;
+}) {
+  const [language, setLanguageState] = useState<Language>(initialLanguage || defaultLanguage);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    // Only update if stored language differs from initial
     const stored = getStoredLanguage();
-    setLanguageState(stored);
-  }, []);
+    if (stored !== initialLanguage) {
+      setLanguageState(stored);
+    }
+  }, [initialLanguage]);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
     setStoredLanguage(lang);
   };
 
-  if (!mounted) {
-    return <>{children}</>;
-  }
+  // Always provide context with current language
+  const contextValue = {
+    language,
+    setLanguage,
+    isRTL: isRTL(language),
+  };
 
   return (
-    <I18nContext.Provider
-      value={{
-        language,
-        setLanguage,
-        isRTL: isRTL(language),
-      }}
-    >
+    <I18nContext.Provider value={contextValue}>
       {children}
     </I18nContext.Provider>
   );

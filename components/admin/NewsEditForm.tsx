@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 import { updateNews, deleteNews } from "@/lib/actions/news";
 import type { NewsDetail } from "@/lib/types";
 
@@ -11,12 +12,12 @@ interface NewsEditFormProps {
 
 export function NewsEditForm({ news }: NewsEditFormProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
   const [formData, setFormData] = useState({
     slug: news.slug,
     titleFa: news.titleFa || "",
     titleEn: news.titleEn || "",
-    publicationDate: news.publicationDate.toISOString().split('T')[0],
+    publicationDate: news.publicationDate.toISOString().split("T")[0],
     country: news.country,
     cities: news.cities.join(", "),
     excerptSeparatorPosition: news.excerptSeparatorPosition?.toString() || "",
@@ -31,16 +32,22 @@ export function NewsEditForm({ news }: NewsEditFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsPending(true);
 
-    startTransition(async () => {
+    try {
       const result = await updateNews(news.slug, {
         slug: formData.slug,
         titleFa: formData.titleFa || undefined,
         titleEn: formData.titleEn || undefined,
         publicationDate: new Date(formData.publicationDate),
         country: formData.country,
-        cities: formData.cities.split(",").map((c) => c.trim()).filter(Boolean),
-        excerptSeparatorPosition: formData.excerptSeparatorPosition ? parseInt(formData.excerptSeparatorPosition) : undefined,
+        cities: formData.cities
+          .split(",")
+          .map((c) => c.trim())
+          .filter(Boolean),
+        excerptSeparatorPosition: formData.excerptSeparatorPosition
+          ? parseInt(formData.excerptSeparatorPosition)
+          : undefined,
         contentFa: formData.contentFa || undefined,
         contentEn: formData.contentEn || undefined,
         imageFile: imageFile || undefined,
@@ -49,12 +56,22 @@ export function NewsEditForm({ news }: NewsEditFormProps) {
       });
 
       if (result.success) {
+        toast.success("News article updated successfully!");
+        await new Promise((resolve) => setTimeout(resolve, 100));
         router.push("/admin/news");
-        router.refresh();
       } else {
-        setError(result.error);
+        const errorMsg = result.error || "Failed to update news";
+        setError(errorMsg);
+        toast.error(errorMsg);
+        setIsPending(false);
       }
-    });
+    } catch (err) {
+      const errorMsg =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(errorMsg);
+      toast.error(errorMsg);
+      setIsPending(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -62,20 +79,35 @@ export function NewsEditForm({ news }: NewsEditFormProps) {
       return;
     }
 
-    startTransition(async () => {
+    setIsPending(true);
+    try {
       const result = await deleteNews(news.slug);
       if (result.success) {
+        toast.success("News article deleted successfully!");
+        await new Promise((resolve) => setTimeout(resolve, 100));
         router.push("/admin/news");
-        router.refresh();
       } else {
-        setError(result.error);
+        const errorMsg = result.error || "Failed to delete news";
+        setError(errorMsg);
+        toast.error(errorMsg);
+        setIsPending(false);
       }
-    });
+    } catch (err) {
+      const errorMsg =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(errorMsg);
+      toast.error(errorMsg);
+      setIsPending(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">{error}</div>}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium mb-2">Slug</label>
@@ -90,20 +122,28 @@ export function NewsEditForm({ news }: NewsEditFormProps) {
 
       <div className="grid md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-2">Title (Persian)</label>
+          <label className="block text-sm font-medium mb-2">
+            Title (Persian)
+          </label>
           <input
             type="text"
             value={formData.titleFa}
-            onChange={(e) => setFormData({ ...formData, titleFa: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, titleFa: e.target.value })
+            }
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-2">Title (English)</label>
+          <label className="block text-sm font-medium mb-2">
+            Title (English)
+          </label>
           <input
             type="text"
             value={formData.titleEn}
-            onChange={(e) => setFormData({ ...formData, titleEn: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, titleEn: e.target.value })
+            }
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
           />
         </div>
@@ -111,11 +151,15 @@ export function NewsEditForm({ news }: NewsEditFormProps) {
 
       <div className="grid md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-2">Publication Date</label>
+          <label className="block text-sm font-medium mb-2">
+            Publication Date
+          </label>
           <input
             type="date"
             value={formData.publicationDate}
-            onChange={(e) => setFormData({ ...formData, publicationDate: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, publicationDate: e.target.value })
+            }
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
             required
           />
@@ -125,7 +169,9 @@ export function NewsEditForm({ news }: NewsEditFormProps) {
           <input
             type="text"
             value={formData.country}
-            onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, country: e.target.value })
+            }
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
             required
           />
@@ -133,7 +179,9 @@ export function NewsEditForm({ news }: NewsEditFormProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Cities (comma-separated)</label>
+        <label className="block text-sm font-medium mb-2">
+          Cities (comma-separated)
+        </label>
         <input
           type="text"
           value={formData.cities}
@@ -143,31 +191,46 @@ export function NewsEditForm({ news }: NewsEditFormProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Excerpt Separator Position (character index)</label>
+        <label className="block text-sm font-medium mb-2">
+          Excerpt Separator Position (character index)
+        </label>
         <input
           type="number"
           value={formData.excerptSeparatorPosition}
-          onChange={(e) => setFormData({ ...formData, excerptSeparatorPosition: e.target.value })}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              excerptSeparatorPosition: e.target.value,
+            })
+          }
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
           placeholder="Leave empty for auto-excerpt"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Content (Persian)</label>
+        <label className="block text-sm font-medium mb-2">
+          Content (Persian)
+        </label>
         <textarea
           value={formData.contentFa}
-          onChange={(e) => setFormData({ ...formData, contentFa: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, contentFa: e.target.value })
+          }
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
           rows={10}
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Content (English)</label>
+        <label className="block text-sm font-medium mb-2">
+          Content (English)
+        </label>
         <textarea
           value={formData.contentEn}
-          onChange={(e) => setFormData({ ...formData, contentEn: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, contentEn: e.target.value })
+          }
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
           rows={10}
         />
@@ -184,7 +247,11 @@ export function NewsEditForm({ news }: NewsEditFormProps) {
           />
           {news.media.image && (
             <div className="mt-2">
-              <img src={news.media.image} alt="Current image" className="h-32 w-auto rounded" />
+              <img
+                src={news.media.image}
+                alt="Current image"
+                className="h-32 w-auto rounded"
+              />
             </div>
           )}
         </div>
@@ -198,7 +265,11 @@ export function NewsEditForm({ news }: NewsEditFormProps) {
           />
           {news.media.video && (
             <div className="mt-2">
-              <video src={news.media.video} controls className="h-32 w-auto rounded" />
+              <video
+                src={news.media.video}
+                controls
+                className="h-32 w-auto rounded"
+              />
             </div>
           )}
         </div>
@@ -225,6 +296,14 @@ export function NewsEditForm({ news }: NewsEditFormProps) {
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
         >
           {isPending ? "Saving..." : "Save Changes"}
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push("/admin/news")}
+          disabled={isPending}
+          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+        >
+          Cancel
         </button>
         <button
           type="button"

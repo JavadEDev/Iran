@@ -38,7 +38,7 @@ export default async function NewsManagementPage() {
                 <td className="px-4 py-3">{news.cities.join(", ")}</td>
                 <td className="px-4 py-3">
                   <Link
-                    href={`/admin/news/${news.slug}`}
+                    href={`/admin/news/${encodeURIComponent(news.slug)}`}
                     className="text-blue-600 hover:text-blue-800"
                   >
                     Edit

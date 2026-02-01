@@ -16,7 +16,7 @@ export function NewsCard({ news }: NewsCardProps) {
 
   return (
     <Link
-      href={`/news/${news.slug}`}
+      href={`/news/${encodeURIComponent(news.slug)}`}
       className="block group bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
       dir={isRTL ? "rtl" : "ltr"}
     >

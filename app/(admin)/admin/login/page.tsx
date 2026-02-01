@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authenticate } from "@/lib/actions/auth";
+import { adminConfig } from "@/lib/config/admin";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,12 +19,12 @@ export default function LoginPage() {
     try {
       const result = await authenticate(password);
       if (result.success) {
-        router.push("/admin");
+        router.push(adminConfig.basePath);
         router.refresh();
       } else {
-        setError("Invalid password");
+        setError(result.error ?? "Invalid password");
       }
-    } catch (err) {
+    } catch {
       setError("Authentication failed");
     } finally {
       setLoading(false);

@@ -1,4 +1,13 @@
-import { pgTable, text, integer, date, timestamp, uuid, index, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  integer,
+  date,
+  timestamp,
+  uuid,
+  index,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 export const victims = pgTable(
   "victims",
@@ -7,17 +16,22 @@ export const victims = pgTable(
     fullNameFa: text("full_name_fa"),
     fullNameEn: text("full_name_en"),
     age: integer("age"),
-    gender: text("gender", { enum: ["male", "female", "child", "unknown"] }).notNull(),
+    gender: text("gender", {
+      enum: ["male", "female", "child", "unknown"],
+    }).notNull(),
     city: text("city").notNull(),
+    cityEn: text("city_en"),
     dateOfDeath: date("date_of_death").notNull(),
     photoUrl: text("photo_url"),
     notesFa: text("notes_fa"),
     notesEn: text("notes_en"),
+    source: text("source"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
     cityIdx: index("idx_victims_city").on(table.city),
+    cityEnIdx: index("idx_victims_city_en").on(table.cityEn),
     genderIdx: index("idx_victims_gender").on(table.gender),
     dateOfDeathIdx: index("idx_victims_date_of_death").on(table.dateOfDeath),
     createdAtIdx: index("idx_victims_created_at").on(table.createdAt),
@@ -44,7 +58,9 @@ export const news = pgTable(
   },
   (table) => ({
     slugIdx: uniqueIndex("idx_news_slug").on(table.slug),
-    publicationDateIdx: index("idx_news_publication_date").on(table.publicationDate),
+    publicationDateIdx: index("idx_news_publication_date").on(
+      table.publicationDate
+    ),
     countryIdx: index("idx_news_country").on(table.country),
     createdAtIdx: index("idx_news_created_at").on(table.createdAt),
   })
@@ -63,7 +79,10 @@ export const newsCities = pgTable(
   (table) => ({
     newsIdIdx: index("idx_news_cities_news_id").on(table.newsId),
     cityIdx: index("idx_news_cities_city").on(table.city),
-    uniqueNewsCity: uniqueIndex("idx_news_cities_unique").on(table.newsId, table.city),
+    uniqueNewsCity: uniqueIndex("idx_news_cities_unique").on(
+      table.newsId,
+      table.city
+    ),
   })
 );
 
@@ -83,7 +102,9 @@ export const statements = pgTable(
   },
   (table) => ({
     slugIdx: uniqueIndex("idx_statements_slug").on(table.slug),
-    publicationDateIdx: index("idx_statements_publication_date").on(table.publicationDate),
+    publicationDateIdx: index("idx_statements_publication_date").on(
+      table.publicationDate
+    ),
     createdAtIdx: index("idx_statements_created_at").on(table.createdAt),
   })
 );

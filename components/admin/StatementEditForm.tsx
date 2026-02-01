@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 import { updateStatement, deleteStatement } from "@/lib/actions/statements";
 import type { Statement } from "@/lib/actions/statements";
 
@@ -11,12 +12,12 @@ interface StatementEditFormProps {
 
 export function StatementEditForm({ statement }: StatementEditFormProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
   const [formData, setFormData] = useState({
     slug: statement.slug,
     titleFa: statement.titleFa || "",
     titleEn: statement.titleEn || "",
-    publicationDate: statement.publicationDate.toISOString().split('T')[0],
+    publicationDate: statement.publicationDate.toISOString().split("T")[0],
     contentFa: statement.contentFa || "",
     contentEn: statement.contentEn || "",
   });
@@ -26,8 +27,9 @@ export function StatementEditForm({ statement }: StatementEditFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsPending(true);
 
-    startTransition(async () => {
+    try {
       const result = await updateStatement(statement.slug, {
         slug: formData.slug,
         titleFa: formData.titleFa || undefined,
@@ -39,12 +41,22 @@ export function StatementEditForm({ statement }: StatementEditFormProps) {
       });
 
       if (result.success) {
+        toast.success("Statement updated successfully!");
         router.push("/admin/statements");
         router.refresh();
       } else {
-        setError(result.error);
+        const errorMsg = result.error || "Failed to update statement";
+        setError(errorMsg);
+        toast.error(errorMsg);
+        setIsPending(false);
       }
-    });
+    } catch (err) {
+      const errorMsg =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(errorMsg);
+      toast.error(errorMsg);
+      setIsPending(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -52,20 +64,35 @@ export function StatementEditForm({ statement }: StatementEditFormProps) {
       return;
     }
 
-    startTransition(async () => {
+    setIsPending(true);
+    try {
       const result = await deleteStatement(statement.slug);
       if (result.success) {
+        toast.success("Statement deleted successfully!");
+        await new Promise((resolve) => setTimeout(resolve, 100));
         router.push("/admin/statements");
-        router.refresh();
       } else {
-        setError(result.error);
+        const errorMsg = result.error || "Failed to delete statement";
+        setError(errorMsg);
+        toast.error(errorMsg);
+        setIsPending(false);
       }
-    });
+    } catch (err) {
+      const errorMsg =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(errorMsg);
+      toast.error(errorMsg);
+      setIsPending(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">{error}</div>}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium mb-2">Slug</label>
@@ -80,51 +107,71 @@ export function StatementEditForm({ statement }: StatementEditFormProps) {
 
       <div className="grid md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-2">Title (Persian)</label>
+          <label className="block text-sm font-medium mb-2">
+            Title (Persian)
+          </label>
           <input
             type="text"
             value={formData.titleFa}
-            onChange={(e) => setFormData({ ...formData, titleFa: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, titleFa: e.target.value })
+            }
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-2">Title (English)</label>
+          <label className="block text-sm font-medium mb-2">
+            Title (English)
+          </label>
           <input
             type="text"
             value={formData.titleEn}
-            onChange={(e) => setFormData({ ...formData, titleEn: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, titleEn: e.target.value })
+            }
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Publication Date</label>
+        <label className="block text-sm font-medium mb-2">
+          Publication Date
+        </label>
         <input
           type="date"
           value={formData.publicationDate}
-          onChange={(e) => setFormData({ ...formData, publicationDate: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, publicationDate: e.target.value })
+          }
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
           required
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Content (Persian)</label>
+        <label className="block text-sm font-medium mb-2">
+          Content (Persian)
+        </label>
         <textarea
           value={formData.contentFa}
-          onChange={(e) => setFormData({ ...formData, contentFa: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, contentFa: e.target.value })
+          }
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
           rows={10}
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Content (English)</label>
+        <label className="block text-sm font-medium mb-2">
+          Content (English)
+        </label>
         <textarea
           value={formData.contentEn}
-          onChange={(e) => setFormData({ ...formData, contentEn: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, contentEn: e.target.value })
+          }
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
           rows={10}
         />
@@ -140,7 +187,11 @@ export function StatementEditForm({ statement }: StatementEditFormProps) {
         />
         {statement.imageUrl && (
           <div className="mt-2">
-            <img src={statement.imageUrl} alt="Current image" className="h-32 w-auto rounded" />
+            <img
+              src={statement.imageUrl}
+              alt="Current image"
+              className="h-32 w-auto rounded"
+            />
           </div>
         )}
       </div>
@@ -152,6 +203,14 @@ export function StatementEditForm({ statement }: StatementEditFormProps) {
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
         >
           {isPending ? "Saving..." : "Save Changes"}
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push("/admin/statements")}
+          disabled={isPending}
+          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+        >
+          Cancel
         </button>
         <button
           type="button"

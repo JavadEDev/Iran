@@ -2,13 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/actions/auth";
+import { adminConfig } from "@/lib/config/admin";
 
 export function LogoutButton() {
   const router = useRouter();
 
   const handleLogout = async () => {
     await logout();
-    router.push("/admin/login");
+    router.push(adminConfig.loginPath);
   };
 
   return (

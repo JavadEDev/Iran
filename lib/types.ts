@@ -3,9 +3,9 @@
  * Bilingual Iranian Revolution Memorial Website
  */
 
-export type Gender = 'male' | 'female' | 'child' | 'unknown';
-export type MediaType = 'photo' | 'video';
-export type Language = 'fa' | 'en';
+export type Gender = "male" | "female" | "child" | "unknown";
+export type MediaType = "photo" | "video";
+export type Language = "fa" | "en";
 
 export interface Victim {
   id: string;
@@ -14,10 +14,16 @@ export interface Victim {
   age: number | null;
   gender: Gender;
   city: string;
+  cityEn: string | null;
   dateOfDeath: Date;
   photoUrl: string | null;
   notesFa: string | null;
   notesEn: string | null;
+  /**
+   * Optional source links (e.g. Telegram, X, Instagram).
+   * Can contain one or multiple URLs separated by newlines or commas.
+   */
+  source: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -77,11 +83,12 @@ export interface VictimFilters {
   maxAge?: number;
   dateFrom?: Date;
   dateTo?: Date;
+  search?: string;
 }
 
 export interface VictimSortOptions {
-  field: 'dateOfDeath' | 'createdAt' | 'name';
-  direction: 'asc' | 'desc';
+  field: "dateOfDeath" | "createdAt" | "name";
+  direction: "asc" | "desc";
 }
 
 export interface MediaItem {
@@ -108,8 +115,8 @@ export interface MediaFilters {
 }
 
 export interface MediaSortOptions {
-  field: 'eventDate' | 'createdAt' | 'location';
-  direction: 'asc' | 'desc';
+  field: "eventDate" | "createdAt" | "location";
+  direction: "asc" | "desc";
 }
 
 export interface HomepageData {

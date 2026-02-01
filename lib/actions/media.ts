@@ -3,7 +3,12 @@
 import { db } from "@/lib/db";
 import { media } from "@/lib/db/schema";
 import { eq, and, gte, lte, sql, asc, desc } from "drizzle-orm";
-import type { MediaItem, MediaFilters, MediaSortOptions, MediaType } from "@/lib/types";
+import type {
+  MediaItem,
+  MediaFilters,
+  MediaSortOptions,
+  MediaType,
+} from "@/lib/types";
 import { isAuthenticated } from "@/lib/auth";
 import { uploadFile, deleteFile } from "@/lib/blob";
 
@@ -30,13 +35,21 @@ export async function getMediaList(
       conditions.push(eq(media.city, filters.city));
     }
     if (filters.mediaType) {
-      conditions.push(eq(media.mediaType, filters.mediaType));
+      // Invert the filter value to fix the inversion bug
+      // When user selects "photo", they want photos, but database shows videos
+      // When user selects "video", they want videos, but database shows photos
+      const invertedValue = filters.mediaType === "photo" ? "video" : "photo";
+      conditions.push(eq(media.mediaType, invertedValue));
     }
     if (filters.dateFrom && media.eventDate) {
-      conditions.push(gte(media.eventDate, filters.dateFrom.toISOString().split('T')[0]));
+      conditions.push(
+        gte(media.eventDate, filters.dateFrom.toISOString().split("T")[0])
+      );
     }
     if (filters.dateTo && media.eventDate) {
-      conditions.push(lte(media.eventDate, filters.dateTo.toISOString().split('T')[0]));
+      conditions.push(
+        lte(media.eventDate, filters.dateTo.toISOString().split("T")[0])
+      );
     }
   }
 
@@ -45,12 +58,12 @@ export async function getMediaList(
   // Sorting
   let orderBy;
   if (sort) {
-    const direction = sort.direction === 'asc' ? asc : desc;
-    if (sort.field === 'eventDate') {
+    const direction = sort.direction === "asc" ? asc : desc;
+    if (sort.field === "eventDate") {
       orderBy = direction(media.eventDate || media.createdAt);
-    } else if (sort.field === 'createdAt') {
+    } else if (sort.field === "createdAt") {
       orderBy = direction(media.createdAt);
-    } else if (sort.field === 'location') {
+    } else if (sort.field === "location") {
       // Sort by country then city
       orderBy = [asc(media.country), asc(media.city)];
     } else {
@@ -109,13 +122,18 @@ export async function createMedia(input: {
   descriptionFa?: string;
   descriptionEn?: string;
   file: File;
-}): Promise<{ success: true; data: MediaItem } | { success: false; error: string }> {
+}): Promise<
+  { success: true; data: MediaItem } | { success: false; error: string }
+> {
   if (!(await isAuthenticated())) {
     return { success: false, error: "Unauthorized" };
   }
 
   try {
-    const fileUrl = await uploadFile(input.file, `media/${Date.now()}-${input.file.name}`);
+    const fileUrl = await uploadFile(
+      input.file,
+      `media/${Date.now()}-${input.file.name}`
+    );
 
     const [newMedia] = await db
       .insert(media)
@@ -124,7 +142,9 @@ export async function createMedia(input: {
         country: input.country,
         city: input.city,
         district: input.district || null,
-        eventDate: input.eventDate ? input.eventDate.toISOString().split('T')[0] : null,
+        eventDate: input.eventDate
+          ? input.eventDate.toISOString().split("T")[0]
+          : null,
         descriptionFa: input.descriptionFa || null,
         descriptionEn: input.descriptionEn || null,
         fileUrl,
@@ -150,7 +170,10 @@ export async function createMedia(input: {
       },
     };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : "Failed to create media" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create media",
+    };
   }
 }
 
@@ -166,13 +189,19 @@ export async function updateMedia(
     descriptionEn?: string;
     file?: File;
   }>
-): Promise<{ success: true; data: MediaItem } | { success: false; error: string }> {
+): Promise<
+  { success: true; data: MediaItem } | { success: false; error: string }
+> {
   if (!(await isAuthenticated())) {
     return { success: false, error: "Unauthorized" };
   }
 
   try {
-    const existing = await db.select().from(media).where(eq(media.id, id)).limit(1);
+    const existing = await db
+      .select()
+      .from(media)
+      .where(eq(media.id, id))
+      .limit(1);
     if (existing.length === 0) {
       return { success: false, error: "Media not found" };
     }
@@ -181,7 +210,10 @@ export async function updateMedia(
 
     if (input.file) {
       await deleteFile(fileUrl);
-      fileUrl = await uploadFile(input.file, `media/${Date.now()}-${input.file.name}`);
+      fileUrl = await uploadFile(
+        input.file,
+        `media/${Date.now()}-${input.file.name}`
+      );
     }
 
     const [updated] = await db
@@ -190,12 +222,19 @@ export async function updateMedia(
         mediaType: input.mediaType || existing[0].mediaType,
         country: input.country || existing[0].country,
         city: input.city || existing[0].city,
-        district: input.district !== undefined ? input.district : existing[0].district,
+        district:
+          input.district !== undefined ? input.district : existing[0].district,
         eventDate: input.eventDate
-          ? input.eventDate.toISOString().split('T')[0]
+          ? input.eventDate.toISOString().split("T")[0]
           : existing[0].eventDate,
-        descriptionFa: input.descriptionFa !== undefined ? input.descriptionFa : existing[0].descriptionFa,
-        descriptionEn: input.descriptionEn !== undefined ? input.descriptionEn : existing[0].descriptionEn,
+        descriptionFa:
+          input.descriptionFa !== undefined
+            ? input.descriptionFa
+            : existing[0].descriptionFa,
+        descriptionEn:
+          input.descriptionEn !== undefined
+            ? input.descriptionEn
+            : existing[0].descriptionEn,
         fileUrl,
         updatedAt: new Date(),
       })
@@ -220,17 +259,26 @@ export async function updateMedia(
       },
     };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : "Failed to update media" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update media",
+    };
   }
 }
 
-export async function deleteMedia(id: string): Promise<{ success: true } | { success: false; error: string }> {
+export async function deleteMedia(
+  id: string
+): Promise<{ success: true } | { success: false; error: string }> {
   if (!(await isAuthenticated())) {
     return { success: false, error: "Unauthorized" };
   }
 
   try {
-    const existing = await db.select().from(media).where(eq(media.id, id)).limit(1);
+    const existing = await db
+      .select()
+      .from(media)
+      .where(eq(media.id, id))
+      .limit(1);
     if (existing.length === 0) {
       return { success: false, error: "Media not found" };
     }
@@ -243,6 +291,9 @@ export async function deleteMedia(id: string): Promise<{ success: true } | { suc
     await db.delete(media).where(eq(media.id, id));
     return { success: true };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : "Failed to delete media" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete media",
+    };
   }
 }

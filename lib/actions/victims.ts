@@ -2,8 +2,18 @@
 
 import { db } from "@/lib/db";
 import { victims } from "@/lib/db/schema";
-import { eq, and, gte, lte, sql, asc, desc, or, like } from "drizzle-orm";
-import type { VictimStats, Victim, VictimFilters, VictimSortOptions, Gender } from "@/lib/types";
+import { eq, and, gte, lte, sql, asc, desc, or, ilike } from "drizzle-orm";
+import type {
+  VictimStats,
+  Victim,
+  VictimFilters,
+  VictimSortOptions,
+  Gender,
+} from "@/lib/types";
+import {
+  victimCreateSchema,
+  victimUpdateSchema,
+} from "@/lib/validation/victim";
 
 export async function getVictimStats(): Promise<VictimStats> {
   const total = await db.select({ count: sql<number>`count(*)` }).from(victims);
@@ -55,10 +65,38 @@ export async function getVictims(
 
   if (filters) {
     if (filters.city) {
-      conditions.push(eq(victims.city, filters.city));
+      const trimmed = filters.city.trim();
+      if (trimmed) {
+        const like = `%${trimmed}%`;
+        conditions.push(
+          or(ilike(victims.city, like), ilike(victims.cityEn, like))
+        );
+      }
     }
     if (filters.gender) {
       conditions.push(eq(victims.gender, filters.gender));
+    }
+    if (filters.search) {
+      const trimmed = filters.search.trim();
+      if (trimmed) {
+        const like = `%${trimmed}%`;
+        const orConditions = [
+          ilike(victims.fullNameFa, like),
+          ilike(victims.fullNameEn, like),
+          ilike(victims.city, like),
+          ilike(victims.cityEn, like),
+          ilike(victims.notesFa, like),
+          ilike(victims.notesEn, like),
+          ilike(victims.source, like),
+        ];
+        if (["male", "female", "child", "unknown"].includes(trimmed)) {
+          orConditions.push(eq(victims.gender, trimmed as Gender));
+        }
+        if (!Number.isNaN(Number(trimmed))) {
+          orConditions.push(eq(victims.age, Number(trimmed)));
+        }
+        conditions.push(or(...orConditions));
+      }
     }
     if (filters.minAge !== undefined) {
       conditions.push(gte(victims.age, filters.minAge));
@@ -67,10 +105,14 @@ export async function getVictims(
       conditions.push(lte(victims.age, filters.maxAge));
     }
     if (filters.dateFrom) {
-      conditions.push(gte(victims.dateOfDeath, filters.dateFrom.toISOString().split('T')[0]));
+      conditions.push(
+        gte(victims.dateOfDeath, filters.dateFrom.toISOString().split("T")[0])
+      );
     }
     if (filters.dateTo) {
-      conditions.push(lte(victims.dateOfDeath, filters.dateTo.toISOString().split('T')[0]));
+      conditions.push(
+        lte(victims.dateOfDeath, filters.dateTo.toISOString().split("T")[0])
+      );
     }
   }
 
@@ -79,12 +121,12 @@ export async function getVictims(
   // Sorting
   let orderBy;
   if (sort) {
-    const direction = sort.direction === 'asc' ? asc : desc;
-    if (sort.field === 'dateOfDeath') {
+    const direction = sort.direction === "asc" ? asc : desc;
+    if (sort.field === "dateOfDeath") {
       orderBy = direction(victims.dateOfDeath);
-    } else if (sort.field === 'createdAt') {
+    } else if (sort.field === "createdAt") {
       orderBy = direction(victims.createdAt);
-    } else if (sort.field === 'name') {
+    } else if (sort.field === "name") {
       orderBy = direction(victims.fullNameEn || victims.fullNameFa || sql`''`);
     } else {
       orderBy = desc(victims.dateOfDeath);
@@ -117,10 +159,12 @@ export async function getVictims(
       age: item.age,
       gender: item.gender as Gender,
       city: item.city,
+      cityEn: item.cityEn,
       dateOfDeath: new Date(item.dateOfDeath),
       photoUrl: item.photoUrl,
       notesFa: item.notesFa,
       notesEn: item.notesEn,
+      source: item.source,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
     })),
@@ -137,36 +181,56 @@ export async function createVictim(input: {
   age?: number;
   gender: Gender;
   city: string;
+  cityEn?: string;
   dateOfDeath: Date;
   photoFile?: File;
   notesFa?: string;
   notesEn?: string;
-}): Promise<{ success: true; data: Victim } | { success: false; error: string }> {
+  source?: string;
+}): Promise<
+  { success: true; data: Victim } | { success: false; error: string }
+> {
   const { isAuthenticated } = await import("@/lib/auth");
   if (!(await isAuthenticated())) {
     return { success: false, error: "Unauthorized" };
   }
 
+  const parsed = victimCreateSchema.safeParse(input);
+  if (!parsed.success) {
+    const first = parsed.error.flatten().fieldErrors;
+    const msg =
+      Object.values(first).flat().find(Boolean) ||
+      parsed.error.message ||
+      "Validation failed";
+    return { success: false, error: String(msg) };
+  }
+  const data = parsed.data;
+
   try {
     let photoUrl: string | null = null;
 
-    if (input.photoFile) {
+    if (data.photoFile) {
       const { uploadFile } = await import("@/lib/blob");
-      photoUrl = await uploadFile(input.photoFile, `victims/${Date.now()}-${input.photoFile.name}`);
+      photoUrl = await uploadFile(
+        data.photoFile,
+        `victims/${Date.now()}-${data.photoFile.name}`
+      );
     }
 
     const [newVictim] = await db
       .insert(victims)
       .values({
-        fullNameFa: input.fullNameFa || null,
-        fullNameEn: input.fullNameEn || null,
-        age: input.age || null,
-        gender: input.gender,
-        city: input.city,
-        dateOfDeath: input.dateOfDeath.toISOString().split('T')[0],
+        fullNameFa: data.fullNameFa || null,
+        fullNameEn: data.fullNameEn || null,
+        age: data.age ?? null,
+        gender: data.gender,
+        city: data.city,
+        cityEn: data.cityEn || null,
+        dateOfDeath: data.dateOfDeath.toISOString().split("T")[0],
         photoUrl,
-        notesFa: input.notesFa || null,
-        notesEn: input.notesEn || null,
+        notesFa: data.notesFa || null,
+        notesEn: data.notesEn || null,
+        source: data.source || null,
       })
       .returning();
 
@@ -179,16 +243,21 @@ export async function createVictim(input: {
         age: newVictim.age,
         gender: newVictim.gender as Gender,
         city: newVictim.city,
+        cityEn: newVictim.cityEn,
         dateOfDeath: new Date(newVictim.dateOfDeath),
         photoUrl: newVictim.photoUrl,
         notesFa: newVictim.notesFa,
         notesEn: newVictim.notesEn,
         createdAt: newVictim.createdAt,
         updatedAt: newVictim.updatedAt,
+        source: newVictim.source,
       },
     };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : "Failed to create victim" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create victim",
+    };
   }
 }
 
@@ -200,45 +269,79 @@ export async function updateVictim(
     age?: number;
     gender: Gender;
     city: string;
+    cityEn?: string;
     dateOfDeath: Date;
     photoFile?: File;
     notesFa?: string;
     notesEn?: string;
+    source?: string;
   }>
-): Promise<{ success: true; data: Victim } | { success: false; error: string }> {
+): Promise<
+  { success: true; data: Victim } | { success: false; error: string }
+> {
   const { isAuthenticated } = await import("@/lib/auth");
   if (!(await isAuthenticated())) {
     return { success: false, error: "Unauthorized" };
   }
 
+  const parsed = victimUpdateSchema.safeParse(input);
+  if (!parsed.success) {
+    const first = parsed.error.flatten().fieldErrors;
+    const msg =
+      Object.values(first).flat().find(Boolean) ||
+      parsed.error.message ||
+      "Validation failed";
+    return { success: false, error: String(msg) };
+  }
+  const data = parsed.data;
+
   try {
-    const existing = await db.select().from(victims).where(eq(victims.id, id)).limit(1);
+    const existing = await db
+      .select()
+      .from(victims)
+      .where(eq(victims.id, id))
+      .limit(1);
     if (existing.length === 0) {
       return { success: false, error: "Victim not found" };
     }
 
     let photoUrl = existing[0].photoUrl;
 
-    if (input.photoFile) {
+    if (data.photoFile) {
       const { uploadFile, deleteFile } = await import("@/lib/blob");
       if (photoUrl) {
         await deleteFile(photoUrl);
       }
-      photoUrl = await uploadFile(input.photoFile, `victims/${Date.now()}-${input.photoFile.name}`);
+      photoUrl = await uploadFile(
+        data.photoFile,
+        `victims/${Date.now()}-${data.photoFile.name}`
+      );
     }
 
     const [updated] = await db
       .update(victims)
       .set({
-        fullNameFa: input.fullNameFa !== undefined ? input.fullNameFa : existing[0].fullNameFa,
-        fullNameEn: input.fullNameEn !== undefined ? input.fullNameEn : existing[0].fullNameEn,
-        age: input.age !== undefined ? input.age : existing[0].age,
-        gender: input.gender || existing[0].gender,
-        city: input.city || existing[0].city,
-        dateOfDeath: input.dateOfDeath ? input.dateOfDeath.toISOString().split('T')[0] : existing[0].dateOfDeath,
+        fullNameFa:
+          data.fullNameFa !== undefined
+            ? data.fullNameFa
+            : existing[0].fullNameFa,
+        fullNameEn:
+          data.fullNameEn !== undefined
+            ? data.fullNameEn
+            : existing[0].fullNameEn,
+        age: data.age !== undefined ? data.age : existing[0].age,
+        gender: data.gender ?? existing[0].gender,
+        city: data.city ?? existing[0].city,
+        cityEn: data.cityEn ?? existing[0].cityEn,
+        dateOfDeath: data.dateOfDeath
+          ? data.dateOfDeath.toISOString().split("T")[0]
+          : existing[0].dateOfDeath,
         photoUrl,
-        notesFa: input.notesFa !== undefined ? input.notesFa : existing[0].notesFa,
-        notesEn: input.notesEn !== undefined ? input.notesEn : existing[0].notesEn,
+        notesFa:
+          data.notesFa !== undefined ? data.notesFa : existing[0].notesFa,
+        notesEn:
+          data.notesEn !== undefined ? data.notesEn : existing[0].notesEn,
+        source: data.source !== undefined ? data.source : existing[0].source,
         updatedAt: new Date(),
       })
       .where(eq(victims.id, id))
@@ -253,27 +356,38 @@ export async function updateVictim(
         age: updated.age,
         gender: updated.gender as Gender,
         city: updated.city,
+        cityEn: updated.cityEn,
         dateOfDeath: new Date(updated.dateOfDeath),
         photoUrl: updated.photoUrl,
         notesFa: updated.notesFa,
         notesEn: updated.notesEn,
         createdAt: updated.createdAt,
         updatedAt: updated.updatedAt,
+        source: updated.source,
       },
     };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : "Failed to update victim" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update victim",
+    };
   }
 }
 
-export async function deleteVictim(id: string): Promise<{ success: true } | { success: false; error: string }> {
+export async function deleteVictim(
+  id: string
+): Promise<{ success: true } | { success: false; error: string }> {
   const { isAuthenticated } = await import("@/lib/auth");
   if (!(await isAuthenticated())) {
     return { success: false, error: "Unauthorized" };
   }
 
   try {
-    const existing = await db.select().from(victims).where(eq(victims.id, id)).limit(1);
+    const existing = await db
+      .select()
+      .from(victims)
+      .where(eq(victims.id, id))
+      .limit(1);
     if (existing.length === 0) {
       return { success: false, error: "Victim not found" };
     }
@@ -286,6 +400,9 @@ export async function deleteVictim(id: string): Promise<{ success: true } | { su
     await db.delete(victims).where(eq(victims.id, id));
     return { success: true };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : "Failed to delete victim" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete victim",
+    };
   }
 }
